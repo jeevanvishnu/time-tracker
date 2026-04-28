@@ -107,7 +107,7 @@ const LeaveRequest = () => {
   const [showLeaveRequestDeleteConfirm, setShowLeaveRequestDeleteConfirm] =
     useState(false);
   const [selectedLeaveId, setSelectedLeaveId] = useState(null);
-  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+  const [showRequestForm, setShowRequestForm] = useState(false);
 
   // Watch form values
   const startDate = watch("startDate");
@@ -125,6 +125,11 @@ const LeaveRequest = () => {
   // Update working days when dates change
   useEffect(() => {
     if (startDate) {
+      // Auto-set end date if it's empty or before start date
+      if (leaveType === "full-day" && (!endDate || endDate < startDate)) {
+        setValue("endDate", startDate);
+      }
+
       const days = calculateWorkingDays(
         startDate,
         endDate,
@@ -155,7 +160,7 @@ const LeaveRequest = () => {
       setWorkingDays(0);
       setExcludedDates({ sundays: 0, holidays: 0 });
     }
-  }, [startDate, endDate, leaveType, halfDayTime]);
+  }, [startDate, endDate, leaveType, halfDayTime, setValue]);
 
   // Fetch leaves on component mount
   useEffect(() => {
@@ -218,6 +223,7 @@ const LeaveRequest = () => {
   };
 
   const onSubmit = async (data) => {
+    console.log("Submitting leave request:", data);
     if (!selectedFile) {
       toast.error("Please upload an email screenshot");
       return;
@@ -258,6 +264,7 @@ const LeaveRequest = () => {
       removeSelectedFile();
       generateUniqueId();
       setWorkingDays(0);
+      setShowRequestForm(false);
       fetchLeaves();
     } catch (error) {
       toast.error(
@@ -305,322 +312,384 @@ const LeaveRequest = () => {
     return "📅 Full Day";
   };
 
-  return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="container mx-auto px-4 py-8">
-        <div className="relative">
-          {/* Main Content - Leave Request Form */}
-          <div
-            className={`transition-all duration-300 ease-in-out ${isHistoryOpen ? "mr-80" : "mr-0"}`}
-          >
-            <div className="bg-white rounded-xl shadow-lg p-6">
-              {/* Header with Toggle Button */}
-              <div className="flex justify-between items-center mb-6">
-                <h2 className="text-2xl font-bold" style={{ color: "#020c4c" }}>
-                  Request Leave
-                </h2>
+  const getStatusBadge = (status) => {
+    switch (status) {
+      case "approved":
+        return "bg-green-100 text-green-700 border-green-200";
+      case "rejected":
+        return "bg-red-100 text-red-700 border-red-200";
+      default:
+        return "bg-yellow-100 text-yellow-700 border-yellow-200";
+    }
+  };
 
-                {/* Toggle History Button */}
+  return (
+    <div className="min-h-screen bg-gray-50 py-8">
+      <div className="container mx-auto px-4 max-w-5xl">
+        {/* Header Section */}
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
+          <div>
+            <h1 className="text-3xl font-bold" style={{ color: "#020c4c" }}>
+              Leave Management
+            </h1>
+            <p className="text-gray-500 mt-1">
+              View your leave history and submit new requests
+            </p>
+          </div>
+          <button
+            onClick={() => {
+              generateUniqueId();
+              setShowRequestForm(true);
+            }}
+            className="flex items-center space-x-2 px-6 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-all shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+            style={{ background: "#020c4c" }}
+          >
+            <ClipboardIcon className="h-5 w-5" />
+            <span className="font-semibold">Request New Leave</span>
+          </button>
+        </div>
+
+        {/* Stats Overview */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
+          <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex items-center space-x-4">
+            <div className="bg-green-100 p-3 rounded-xl">
+              <ClipboardCheckIcon className="h-6 w-6 text-green-600" />
+            </div>
+            <div>
+              <p className="text-sm text-gray-500 font-medium">Approved</p>
+              <p className="text-2xl font-bold text-gray-900">
+                {leaves.filter((l) => l.status === "approved").length}
+              </p>
+            </div>
+          </div>
+          <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex items-center space-x-4">
+            <div className="bg-yellow-100 p-3 rounded-xl">
+              <ClockIcon className="h-6 w-6 text-yellow-600" />
+            </div>
+            <div>
+              <p className="text-sm text-gray-500 font-medium">Pending</p>
+              <p className="text-2xl font-bold text-gray-900">
+                {leaves.filter((l) => l.status === "pending").length}
+              </p>
+            </div>
+          </div>
+          <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex items-center space-x-4">
+            <div className="bg-red-100 p-3 rounded-xl">
+              <XIcon className="h-6 w-6 text-red-600" />
+            </div>
+            <div>
+              <p className="text-sm text-gray-500 font-medium">Rejected</p>
+              <p className="text-2xl font-bold text-gray-900">
+                {leaves.filter((l) => l.status === "rejected").length}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Leave History Section */}
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+          <div className="px-6 py-5 border-b border-gray-100 flex justify-between items-center">
+            <h3 className="text-lg font-bold" style={{ color: "#020c4c" }}>
+              Leave History
+            </h3>
+            <span className="text-sm text-gray-500">
+              Total: {leaves.length} records
+            </span>
+          </div>
+
+          <div className="overflow-x-auto">
+            {leaves.length === 0 ? (
+              <div className="text-center py-16">
+                <div className="bg-gray-50 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <CalendarIcon className="h-10 w-10 text-gray-300" />
+                </div>
+                <p className="text-gray-500 font-medium">
+                  No leave requests found
+                </p>
                 <button
-                  onClick={() => setIsHistoryOpen(!isHistoryOpen)}
-                  className="flex items-center space-x-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg transition-all duration-200"
+                  onClick={() => setShowRequestForm(true)}
+                  className="mt-4 text-blue-600 hover:underline text-sm font-medium"
                 >
-                  {isHistoryOpen ? (
-                    <>
-                      <ChevronRightIcon className="h-5 w-5" />
-                      <span className="text-sm">Hide History</span>
-                    </>
-                  ) : (
-                    <>
-                      <MenuIcon className="h-5 w-5" />
-                      <span className="text-sm">
-                        History ({leaves.length})
-                        {leaves.filter((l) => l.status === "pending").length >
-                          0 && (
-                          <span className="ml-1 text-yellow-600">
-                            (
-                            {
-                              leaves.filter((l) => l.status === "pending")
-                                .length
-                            }{" "}
-                            pending)
-                          </span>
-                        )}
-                      </span>
-                    </>
-                  )}
+                  Submit your first request
                 </button>
               </div>
+            ) : (
+              <table className="w-full">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                      Leave ID
+                    </th>
+                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                      Dates
+                    </th>
+                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                      Type
+                    </th>
+                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                      Status
+                    </th>
+                    <th className="px-6 py-4 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                      Actions
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {leaves.map((leave) => (
+                    <tr key={leave._id} className="hover:bg-gray-50 transition-colors">
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className="text-sm font-mono text-gray-600 bg-gray-100 px-2 py-1 rounded">
+                          {leave.leaveId}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="text-sm font-medium text-gray-900">
+                          {leave.startDate && leave.endDate
+                            ? `${new Date(leave.startDate).toLocaleDateString()} ${leave.endDate > leave.startDate ? `- ${new Date(leave.endDate).toLocaleDateString()}` : ""}`
+                            : new Date(leave.date).toLocaleDateString()}
+                        </div>
+                        <div className="text-xs text-gray-500 mt-1">
+                          {leave.leaveDays} {leave.leaveDays === 1 ? "Day" : "Days"}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className="text-sm text-gray-700">
+                          {getLeaveTypeDisplay(leave)}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className={`px-3 py-1 rounded-full text-xs font-semibold border ${getStatusBadge(leave.status)}`}>
+                          {leave.status.charAt(0).toUpperCase() + leave.status.slice(1)}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                        <div className="flex items-center justify-end space-x-3">
+                          {leave.emailScreenshot && (
+                            <a
+                              href={
+                                leave.emailScreenshot.startsWith("http")
+                                  ? leave.emailScreenshot
+                                  : `https://res.cloudinary.com/${import.meta.env.VITE_CLOUDINARY_CLOUD_NAME}/${leave.emailScreenshot}`
+                              }
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-blue-600 hover:text-blue-800"
+                              title="View Screenshot"
+                            >
+                              <PhotographIcon className="h-5 w-5" />
+                            </a>
+                          )}
+                          {leave.status === "pending" && (
+                            <button
+                              onClick={() => handleCancelLeave(leave._id)}
+                              className="text-red-500 hover:text-red-700 transition-colors"
+                              title="Cancel Request"
+                            >
+                              <XIcon className="h-5 w-5" />
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+        </div>
+      </div>
 
-              <input type="hidden" {...register("leaveId")} />
+      {/* Leave Request Modal */}
+      {showRequestForm && (
+        <div className="fixed inset-0 z-50 overflow-y-auto flex items-center justify-center p-4 bg-black bg-opacity-60 backdrop-blur-sm">
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl overflow-hidden animate-in fade-in zoom-in duration-200">
+            {/* Modal Header */}
+            <div className="px-8 py-6 flex justify-between items-center border-b border-gray-100" style={{ background: "#020c4c" }}>
+              <div>
+                <h2 className="text-2xl font-bold text-white">New Leave Request</h2>
+                <p className="text-blue-200 text-sm mt-1">Fill in the details to submit your request</p>
+              </div>
+              <button
+                onClick={() => setShowRequestForm(false)}
+                className="p-2 hover:bg-white/10 rounded-full transition-colors text-white"
+              >
+                <XIcon className="h-6 w-6" />
+              </button>
+            </div>
 
-              {/* Leave ID Display */}
-              <div className="mb-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
-                <label className="block text-sm font-medium text-blue-800 mb-2">
-                  Your Leave Request ID
-                </label>
-                <div className="flex items-center space-x-2">
-                  <div className="flex-1 bg-white border border-blue-300 rounded-md px-3 py-2 font-mono text-sm">
+            <div className="p-8 max-h-[75vh] overflow-y-auto custom-scrollbar">
+              <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+                <input type="hidden" {...register("leaveId")} />
+                <input type="hidden" {...register("leaveType")} />
+                {/* Leave ID Banner */}
+                <div className="bg-blue-50 rounded-2xl p-5 border border-blue-100">
+                  <div className="flex justify-between items-center mb-3">
+                    <span className="text-sm font-semibold text-blue-800">Your Leave Request ID</span>
+                    <button
+                      type="button"
+                      onClick={copyToClipboard}
+                      className="text-xs bg-white text-blue-600 px-3 py-1.5 rounded-lg border border-blue-200 hover:bg-blue-50 transition-all font-medium flex items-center space-x-1"
+                    >
+                      {copied ? <ClipboardCheckIcon className="h-4 w-4" /> : <ClipboardIcon className="h-4 w-4" />}
+                      <span>{copied ? "Copied" : "Copy ID"}</span>
+                    </button>
+                  </div>
+                  <div className="bg-white border border-blue-200 rounded-xl px-4 py-3 font-mono text-lg text-center tracking-wider text-blue-900 shadow-sm">
                     {leaveId}
                   </div>
-                  <button
-                    type="button"
-                    onClick={copyToClipboard}
-                    className="p-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition flex items-center space-x-1"
-                    title="Copy to clipboard"
-                  >
-                    {copied ? (
-                      <ClipboardCheckIcon className="h-5 w-5" />
-                    ) : (
-                      <ClipboardIcon className="h-5 w-5" />
-                    )}
-                  </button>
-                </div>
-
-                <div className="mt-3 text-sm text-blue-700 bg-blue-100 p-3 rounded-md">
-                  <p className="font-medium mb-1">📧 Email Instructions:</p>
-                  <p>
-                    Please send an email with your leave request and include
-                    this ID in the subject line:
-                  </p>
-                  <p className="font-mono mt-2 p-2 bg-white rounded border border-blue-200">
-                    Subject: Leave Request - {leaveId}
-                  </p>
-                  <p className="mt-2 text-xs">
-                    Then upload a screenshot of the sent email below.
-                  </p>
-                </div>
-              </div>
-
-              <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-                {/* Leave Type Selection */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Leave Type *
-                  </label>
-                  <div className="flex space-x-4">
-                    <label className="flex items-center">
-                      <input
-                        type="radio"
-                        value="full-day"
-                        {...register("leaveType")}
-                        className="mr-2"
-                      />
-                      <span>Full Day</span>
-                    </label>
-                    <label className="flex items-center">
-                      <input
-                        type="radio"
-                        value="half-day"
-                        {...register("leaveType")}
-                        className="mr-2"
-                      />
-                      <span>Half Day</span>
-                    </label>
-                  </div>
-                </div>
-
-                {/* Start Date */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Date *
-                  </label>
-                  <div className="relative">
-                    <CalendarIcon className="h-5 w-5 text-gray-400 absolute left-3 top-2.5" />
-                    <input
-                      type="date"
-                      {...register("startDate", {
-                        required: "Date is required",
-                      })}
-                      min={new Date().toISOString().split("T")[0]}
-                      className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                  </div>
-                  {errors.startDate && (
-                    <p className="text-red-500 text-xs mt-1">
-                      {errors.startDate.message}
+                  <div className="mt-4 text-xs text-blue-600 bg-blue-100/50 p-3 rounded-xl border border-blue-100">
+                    <p className="font-bold flex items-center space-x-1 mb-1">
+                      <InformationCircleIcon className="h-3 w-3" />
+                      <span>Email Instructions:</span>
                     </p>
+                    <p>Include this ID in your email subject line: <strong>Leave Request - {leaveId}</strong></p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* Leave Type */}
+                  <div className="col-span-full">
+                    <label className="block text-sm font-bold text-gray-700 mb-3">Leave Type</label>
+                    <div className="flex bg-gray-50 p-1.5 rounded-2xl border border-gray-100">
+                      <button
+                        type="button"
+                        onClick={() => setValue("leaveType", "full-day")}
+                        className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition-all ${leaveType === "full-day" ? "bg-white text-blue-700 shadow-sm" : "text-gray-500 hover:text-gray-700"}`}
+                      >
+                        Full Day
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setValue("leaveType", "half-day")}
+                        className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition-all ${leaveType === "half-day" ? "bg-white text-blue-700 shadow-sm" : "text-gray-500 hover:text-gray-700"}`}
+                      >
+                        Half Day
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Start Date */}
+                  <div className={leaveType === "full-day" ? "col-span-1" : "col-span-full"}>
+                    <label className="block text-sm font-bold text-gray-700 mb-2">Date *</label>
+                    <div className="relative">
+                      <CalendarIcon className="h-5 w-5 text-gray-400 absolute left-4 top-1/2 -translate-y-1/2" />
+                      <input
+                        type="date"
+                        {...register("startDate", { required: "Date is required" })}
+                        min={new Date().toISOString().split("T")[0]}
+                        className="w-full pl-12 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all outline-none"
+                      />
+                    </div>
+                    {errors.startDate && (
+                      <p className="text-red-500 text-xs mt-1 px-1">
+                        {errors.startDate.message}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* End Date */}
+                  {leaveType === "full-day" && (
+                    <div className="col-span-1">
+                      <label className="block text-sm font-bold text-gray-700 mb-2">End Date *</label>
+                      <div className="relative">
+                        <CalendarIcon className="h-5 w-5 text-gray-400 absolute left-4 top-1/2 -translate-y-1/2" />
+                        <input
+                          type="date"
+                          {...register("endDate", {
+                            required: "End date is required",
+                            validate: (value) => !startDate || value >= startDate || "Must be after start date"
+                          })}
+                          min={startDate || new Date().toISOString().split("T")[0]}
+                          className="w-full pl-12 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all outline-none"
+                        />
+                      </div>
+                      {errors.endDate && (
+                        <p className="text-red-500 text-xs mt-1 px-1">
+                          {errors.endDate.message}
+                        </p>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Half Day Selection */}
+                  {leaveType === "half-day" && (
+                    <div className="col-span-full">
+                      <label className="block text-sm font-bold text-gray-700 mb-2">Session *</label>
+                      <div className="grid grid-cols-2 gap-4">
+                        <label className={`flex items-center justify-center p-4 rounded-xl border-2 transition-all cursor-pointer ${halfDayTime === 'morning' ? 'border-blue-500 bg-blue-50' : 'border-gray-100 bg-gray-50'}`}>
+                          <input type="radio" value="morning" {...register("halfDayTime", { required: leaveType === "half-day" ? "Please select a session" : false })} className="hidden" />
+                          <span className={`text-sm font-bold ${halfDayTime === 'morning' ? 'text-blue-700' : 'text-gray-500'}`}>☀️ Morning (9-1)</span>
+                        </label>
+                        <label className={`flex items-center justify-center p-4 rounded-xl border-2 transition-all cursor-pointer ${halfDayTime === 'afternoon' ? 'border-blue-500 bg-blue-50' : 'border-gray-100 bg-gray-50'}`}>
+                          <input type="radio" value="afternoon" {...register("halfDayTime")} className="hidden" />
+                          <span className={`text-sm font-bold ${halfDayTime === 'afternoon' ? 'text-blue-700' : 'text-gray-500'}`}>🌙 Afternoon (2-6)</span>
+                        </label>
+                      </div>
+                      {errors.halfDayTime && (
+                        <p className="text-red-500 text-xs mt-1 px-1">
+                          {errors.halfDayTime.message}
+                        </p>
+                      )}
+                    </div>
                   )}
                 </div>
 
-                {/* End Date - Only for Full Day */}
-                {leaveType === "full-day" && (
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      End Date *
-                    </label>
-                    <div className="relative">
-                      <CalendarIcon className="h-5 w-5 text-gray-400 absolute left-3 top-2.5" />
-                      <input
-                        type="date"
-                        {...register("endDate", {
-                          required: "End date is required",
-                          validate: (value) => {
-                            if (startDate && value < startDate) {
-                              return "End date must be after start date";
-                            }
-                            return true;
-                          },
-                        })}
-                        min={
-                          startDate || new Date().toISOString().split("T")[0]
-                        }
-                        className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      />
-                    </div>
-                    {errors.endDate && (
-                      <p className="text-red-500 text-xs mt-1">
-                        {errors.endDate.message}
-                      </p>
-                    )}
-                  </div>
-                )}
-
-                {/* Half Day Time Selection */}
-                {leaveType === "half-day" && (
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Half Day Session *
-                    </label>
-                    <div className="flex space-x-4">
-                      <label className="flex items-center">
-                        <input
-                          type="radio"
-                          value="morning"
-                          {...register("halfDayTime", {
-                            required: "Please select morning or afternoon",
-                          })}
-                          className="mr-2"
-                        />
-                        <span>Morning (9 AM - 1 PM)</span>
-                      </label>
-                      <label className="flex items-center">
-                        <input
-                          type="radio"
-                          value="afternoon"
-                          {...register("halfDayTime")}
-                          className="mr-2"
-                        />
-                        <span>Afternoon (2 PM - 6 PM)</span>
-                      </label>
-                    </div>
-                    {errors.halfDayTime && (
-                      <p className="text-red-500 text-xs mt-1">
-                        {errors.halfDayTime.message}
-                      </p>
-                    )}
-                  </div>
-                )}
-
-                {/* Leave Days Calculation Display */}
+                {/* Summary Banner */}
                 {startDate && workingDays > 0 && (
-                  <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
-                    <div className="flex items-start space-x-2">
-                      <InformationCircleIcon className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
-                      <div className="flex-1">
-                        <p className="text-sm font-medium text-blue-800">
-                          Leave Summary
-                        </p>
-                        <div className="mt-2 space-y-1 text-sm">
-                          <p className="text-blue-700">
-                            <strong>Total Leave Days:</strong> {workingDays}{" "}
-                            {workingDays === 0.5
-                              ? "day (Half Day)"
-                              : workingDays === 1
-                                ? "day"
-                                : "days"}
-                          </p>
-                          <p className="text-xs text-blue-600">
-                            Date: {formatDateForDisplay(startDate)}
-                            {leaveType === "full-day" &&
-                              endDate &&
-                              ` - ${formatDateForDisplay(endDate)}`}
-                          </p>
-                          {leaveType === "half-day" && halfDayTime && (
-                            <p className="text-xs text-blue-600">
-                              Session:{" "}
-                              {halfDayTime === "morning"
-                                ? "Morning (9 AM - 1 PM)"
-                                : "Afternoon (2 PM - 6 PM)"}
-                            </p>
-                          )}
-                          {excludedDates.sundays > 0 && (
-                            <p className="text-xs text-blue-600">
-                              Excluded: {excludedDates.sundays} Sunday
-                              {excludedDates.sundays !== 1 ? "s" : ""}
-                            </p>
-                          )}
-                          {excludedDates.holidays > 0 && (
-                            <p className="text-xs text-blue-600">
-                              Excluded: {excludedDates.holidays} Holiday
-                              {excludedDates.holidays !== 1 ? "s" : ""}
-                            </p>
-                          )}
+                  <div className="p-4 bg-gradient-to-r from-blue-600 to-blue-800 rounded-2xl text-white shadow-md">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-3">
+                        <div className="bg-white/20 p-2 rounded-lg">
+                          <InformationCircleIcon className="h-5 w-5" />
                         </div>
+                        <div>
+                          <p className="text-xs text-blue-100 font-medium">Calculation Summary</p>
+                          <p className="text-lg font-bold">Total: {workingDays} {workingDays === 1 ? "Day" : "Days"}</p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-[10px] text-blue-200 uppercase tracking-wider font-bold">Duration</p>
+                        <p className="text-sm font-bold">{formatDateForDisplay(startDate)} {endDate && `- ${formatDateForDisplay(endDate)}`}</p>
                       </div>
                     </div>
                   </div>
                 )}
 
+                {/* Reason */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Reason for Leave
-                  </label>
+                  <label className="block text-sm font-bold text-gray-700 mb-2">Reason for Leave *</label>
                   <textarea
-                    {...register("reason", {
-                      required: "Reason is required",
-                      minLength: {
-                        value: 10,
-                        message:
-                          "Please provide a detailed reason (minimum 10 characters)",
-                      },
-                    })}
-                    rows="5"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="Please provide reason for leave..."
+                    {...register("reason", { required: "Reason is required", minLength: 10 })}
+                    rows="4"
+                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all outline-none resize-none"
+                    placeholder="Provide a brief explanation for your leave request..."
                   />
                   {errors.reason && (
-                    <p className="text-red-500 text-xs mt-1">
+                    <p className="text-red-500 text-xs mt-1 px-1">
                       {errors.reason.message}
                     </p>
                   )}
                 </div>
 
+                {/* File Upload */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Email Screenshot
-                  </label>
-
+                  <label className="block text-sm font-bold text-gray-700 mb-2">Email Screenshot *</label>
                   {!previewUrl ? (
-                    <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-blue-500 transition">
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={handleFileChange}
-                        className="hidden"
-                        id="screenshot"
-                      />
-                      <label htmlFor="screenshot" className="cursor-pointer">
-                        <PhotographIcon className="h-12 w-12 text-gray-400 mx-auto mb-2" />
-                        <span className="text-sm text-gray-600">
-                          Click to upload screenshot
-                        </span>
-                        <span className="text-xs text-gray-500 block mt-1">
-                          Max size: 5MB (JPG, PNG, GIF)
-                        </span>
+                    <div className="border-2 border-dashed border-gray-200 rounded-2xl p-8 text-center hover:border-blue-400 hover:bg-blue-50 transition-all cursor-pointer group">
+                      <input type="file" accept="image/*" onChange={handleFileChange} className="hidden" id="modal-screenshot" />
+                      <label htmlFor="modal-screenshot" className="cursor-pointer">
+                        <PhotographIcon className="h-12 w-12 text-gray-300 mx-auto mb-3 group-hover:text-blue-400" />
+                        <p className="text-sm font-bold text-gray-600">Click to upload screenshot</p>
+                        <p className="text-xs text-gray-400 mt-1">Maximum size: 5MB</p>
                       </label>
                     </div>
                   ) : (
-                    <div className="relative">
-                      <img
-                        src={previewUrl}
-                        alt="Preview"
-                        className="w-full h-48 object-contain bg-gray-100 rounded-lg"
-                      />
+                    <div className="relative rounded-2xl overflow-hidden bg-gray-100 h-48 group">
+                      <img src={previewUrl} alt="Preview" className="w-full h-full object-contain" />
                       <button
                         type="button"
                         onClick={removeSelectedFile}
-                        className="absolute top-2 right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600"
+                        className="absolute top-3 right-3 p-2 bg-red-500 text-white rounded-full hover:bg-red-600 shadow-lg opacity-0 group-hover:opacity-100 transition-opacity"
                       >
                         <XIcon className="h-4 w-4" />
                       </button>
@@ -628,173 +697,31 @@ const LeaveRequest = () => {
                   )}
                 </div>
 
-                <button
-                  type="submit"
-                  disabled={uploading || workingDays === 0}
-                  className={`w-full py-3 px-4 rounded-lg text-white font-medium transition ${
-                    uploading || workingDays === 0
-                      ? "opacity-50 cursor-not-allowed"
-                      : "hover:opacity-90"
-                  }`}
-                  style={{
-                    background:
-                      uploading || workingDays === 0 ? "#6b7280" : "#020c4c",
-                  }}
-                >
-                  {uploading
-                    ? "Submitting..."
-                    : workingDays === 0
-                      ? "Select date"
-                      : "Submit Leave Request"}
-                </button>
+                {/* Submit Button */}
+                <div className="flex space-x-3 pt-2">
+                  <button
+                    type="submit"
+                    disabled={uploading || workingDays === 0}
+                    className="flex-1 py-4 bg-blue-600 text-white rounded-2xl font-bold text-lg hover:bg-blue-700 transition-all shadow-lg hover:shadow-xl disabled:opacity-50"
+                    style={{ background: "#020c4c" }}
+                  >
+                    {uploading ? "Submitting Request..." : "Send Request"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowRequestForm(false)}
+                    className="px-8 py-4 bg-gray-100 text-gray-700 rounded-2xl font-bold text-lg hover:bg-gray-200 transition-all"
+                  >
+                    Cancel
+                  </button>
+                </div>
               </form>
             </div>
           </div>
-
-          {/* Collapsible History Panel */}
-          <div
-            className={`fixed top-0 right-0 h-full bg-white shadow-2xl transition-all duration-300 ease-in-out z-20 overflow-y-auto ${
-              isHistoryOpen ? "w-80" : "w-0"
-            }`}
-            style={{ top: "80px", height: "calc(100% - 80px)" }}
-          >
-            <div className="p-4">
-              <div className="flex justify-between items-center mb-4 pb-2 border-b">
-                <h3 className="text-lg font-bold" style={{ color: "#020c4c" }}>
-                  Leave History
-                </h3>
-                <button
-                  onClick={() => setIsHistoryOpen(false)}
-                  className="p-1 rounded-full hover:bg-gray-100"
-                >
-                  <ChevronRightIcon className="h-5 w-5" />
-                </button>
-              </div>
-
-              <div className="grid grid-cols-3 gap-2 mb-4">
-                <div className="text-center p-2 bg-green-50 rounded-lg">
-                  <p className="text-xs text-gray-500">Approved</p>
-                  <p className="text-lg font-bold text-green-600">
-                    {leaves.filter((l) => l.status === "approved").length}
-                  </p>
-                </div>
-                <div className="text-center p-2 bg-yellow-50 rounded-lg">
-                  <p className="text-xs text-gray-500">Pending</p>
-                  <p className="text-lg font-bold text-yellow-600">
-                    {leaves.filter((l) => l.status === "pending").length}
-                  </p>
-                </div>
-                <div className="text-center p-2 bg-red-50 rounded-lg">
-                  <p className="text-xs text-gray-500">Rejected</p>
-                  <p className="text-lg font-bold text-red-600">
-                    {leaves.filter((l) => l.status === "rejected").length}
-                  </p>
-                </div>
-              </div>
-
-              <div className="space-y-3">
-                {leaves.length === 0 ? (
-                  <div className="text-center py-8">
-                    <ClockIcon className="h-12 w-12 text-gray-300 mx-auto mb-2" />
-                    <p className="text-gray-500 text-sm">
-                      No leave requests yet
-                    </p>
-                  </div>
-                ) : (
-                  leaves.map((leave) => (
-                    <div
-                      key={leave._id}
-                      className="border rounded-lg p-3 hover:shadow-md transition"
-                    >
-                      <div className="flex items-start justify-between mb-2">
-                        <div className="flex-1">
-                          <div className="flex items-center space-x-2 mb-1">
-                            <span className="text-xs font-mono text-gray-500">
-                              {leave.leaveId}
-                            </span>
-                            <span
-                              className={`text-xs px-1.5 py-0.5 rounded-full ${getStatusColor(leave.status)}`}
-                            >
-                              {leave.status}
-                            </span>
-                          </div>
-                          <p className="text-xs font-medium">
-                            {leave.startDate && leave.endDate
-                              ? `${new Date(leave.startDate).toLocaleDateString()}${leave.endDate > leave.startDate ? ` - ${new Date(leave.endDate).toLocaleDateString()}` : ""}`
-                              : new Date(leave.date).toLocaleDateString()}
-                          </p>
-                          <p className="text-xs text-blue-600 mt-0.5 font-medium">
-                            {getLeaveTypeDisplay(leave)}
-                          </p>
-                          {leave.leaveDays && (
-                            <p className="text-xs text-gray-500 mt-0.5">
-                              {leave.leaveDays}{" "}
-                              {leave.leaveDays === 0.5
-                                ? "Day (Half Day)"
-                                : leave.leaveDays === 1
-                                  ? "Day"
-                                  : "Days"}
-                            </p>
-                          )}
-                          <p className="text-xs text-gray-600 mt-1 line-clamp-2">
-                            {leave.reason}
-                          </p>
-                        </div>
-                        {leave.status === "pending" && (
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleCancelLeave(leave._id);
-                            }}
-                            className="text-red-500 hover:text-red-700"
-                            title="Cancel Request"
-                          >
-                            <XIcon className="h-3 w-3" />
-                          </button>
-                        )}
-                      </div>
-
-                      {leave.emailScreenshot && (
-                        <div className="mt-2">
-                          <a
-                            href={
-                              leave.emailScreenshot.startsWith("http")
-                                ? leave.emailScreenshot
-                                : `https://res.cloudinary.com/${import.meta.env.VITE_CLOUDINARY_CLOUD_NAME}/${leave.emailScreenshot}`
-                            }
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-xs text-blue-600 hover:text-blue-800 flex items-center space-x-1"
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            <PhotographIcon className="h-3 w-3" />
-                            <span>View Screenshot</span>
-                          </a>
-                        </div>
-                      )}
-
-                      {leave.rejectionReason && (
-                        <div className="mt-2 p-2 bg-red-50 text-red-700 rounded text-xs">
-                          <strong>Rejected:</strong> {leave.rejectionReason}
-                        </div>
-                      )}
-                    </div>
-                  ))
-                )}
-              </div>
-            </div>
-          </div>
-
-          {isHistoryOpen && (
-            <div
-              className="fixed inset-0 bg-black bg-opacity-50 z-10 md:hidden"
-              onClick={() => setIsHistoryOpen(false)}
-              style={{ top: "80px" }}
-            />
-          )}
         </div>
-      </div>
+      )}
 
+      {/* Confirmation Modal */}
       <ConfirmModal
         isOpen={showLeaveRequestDeleteConfirm}
         onClose={() => {

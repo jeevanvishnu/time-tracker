@@ -489,9 +489,25 @@ const requestLeave = async (req, res) => {
       leaveData.endDate = start; // For half-day, end date same as start
     }
 
+    console.log("Request Body:", req.body);
+    console.log("File Info:", req.file);
+
+    if (!req.file || !req.file.path) {
+      return res.status(400).json({ message: "Email screenshot upload failed. Please check your connection or Cloudinary settings." });
+    }
+
     const leave = new Leave(leaveData);
 
-    await leave.save();
+    try {
+      await leave.save();
+    } catch (saveError) {
+      if (saveError.name === 'ValidationError') {
+        const messages = Object.values(saveError.errors).map(val => val.message);
+        return res.status(400).json({ message: "Validation Error", errors: messages });
+      }
+      throw saveError;
+    }
+
     await leave.populate("userId", "email firstName lastName");
 
     res.status(201).json({
@@ -510,7 +526,11 @@ const requestLeave = async (req, res) => {
       }
     }
 
-    res.status(500).json({ message: "Server error" });
+    res.status(500).json({ 
+      message: "Server error during leave request", 
+      error: error.message,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
   }
 };
 
