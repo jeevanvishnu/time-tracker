@@ -932,6 +932,33 @@ const getCustomDateReport = async (req, res) => {
   }
 };
 
+// @desc    Hard delete a staff member
+// @route   DELETE /api/admin/staff/:id/hard
+const hardDeleteStaff = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const staff = await User.findById(id);
+
+    if (!staff) {
+      return res.status(404).json({ message: "Staff member not found" });
+    }
+
+    if (staff.role === "admin") {
+      return res.status(403).json({ message: "Cannot delete admin users" });
+    }
+
+    await User.findByIdAndDelete(id);
+    // Optional: Delete associated records
+    await Attendance.deleteMany({ userId: id });
+    await Leave.deleteMany({ userId: id });
+
+    res.json({ success: true, message: "Staff member permanently deleted" });
+  } catch (error) {
+    console.error("Error in hardDeleteStaff:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
 module.exports = {
   createStaff,
   deleteStaff,
@@ -948,4 +975,5 @@ module.exports = {
   autoApproveLeaves,
   getPendingExpiringLeaves,
   getCustomDateReport,
+  hardDeleteStaff,
 };

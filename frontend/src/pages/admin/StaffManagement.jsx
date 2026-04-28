@@ -28,6 +28,7 @@ const StaffManagement = () => {
   const [editingStaff, setEditingStaff] = useState(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showRestoreConfirm, setShowRestoreConfirm] = useState(false);
+  const [showHardDeleteConfirm, setShowHardDeleteConfirm] = useState(false);
   const [selectedStaff, setSelectedStaff] = useState(null);
   const [activeStaffToday, setActiveStaffToday] = useState([]);
 
@@ -154,6 +155,11 @@ const StaffManagement = () => {
     setShowRestoreConfirm(true);
   };
 
+  const handleHardDelete = (staffMember) => {
+    setSelectedStaff(staffMember);
+    setShowHardDeleteConfirm(true);
+  };
+
   const confirmDelete = async () => {
     try {
       const response = await axiosInstance.delete(
@@ -179,6 +185,20 @@ const StaffManagement = () => {
       fetchStaff();
     } catch (error) {
       toast.error(error.response?.data?.message || "Failed to restore staff");
+    }
+  };
+
+  const confirmHardDelete = async () => {
+    try {
+      const response = await axiosInstance.delete(
+        `/admin/staff/${selectedStaff._id}/hard`,
+      );
+      toast.success(response.data.message || "Staff member permanently deleted");
+      setShowHardDeleteConfirm(false);
+      setSelectedStaff(null);
+      fetchStaff();
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Failed to permanently delete staff");
     }
   };
 
@@ -585,13 +605,22 @@ const StaffManagement = () => {
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                           {member.isActive === false ? (
-                            <button
-                              onClick={() => handleRestore(member)}
-                              className="text-green-600 hover:text-green-900 flex items-center space-x-1"
-                            >
-                              <RefreshIcon className="h-5 w-5" />
-                              <span>Reactivate</span>
-                            </button>
+                            <div className="flex space-x-3">
+                              <button
+                                onClick={() => handleRestore(member)}
+                                className="text-green-600 hover:text-green-900"
+                                title="Restore"
+                              >
+                                <RefreshIcon className="h-5 w-5" />
+                              </button>
+                              <button
+                                onClick={() => handleHardDelete(member)}
+                                className="text-red-600 hover:text-red-900"
+                                title="Permanent Delete"
+                              >
+                                <TrashIcon className="h-5 w-5" />
+                              </button>
+                            </div>
                           ) : (
                             <div className="flex space-x-3">
                               <button
@@ -603,10 +632,17 @@ const StaffManagement = () => {
                               </button>
                               <button
                                 onClick={() => handleDelete(member)}
-                                className="text-red-600 hover:text-red-900"
+                                className="text-yellow-600 hover:text-yellow-900"
                                 title="Deactivate"
                               >
                                 <MinusCircleIcon className="h-5 w-5" />
+                              </button>
+                              <button
+                                onClick={() => handleHardDelete(member)}
+                                className="text-red-600 hover:text-red-900"
+                                title="Permanent Delete"
+                              >
+                                <TrashIcon className="h-5 w-5" />
                               </button>
                             </div>
                           )}
@@ -703,13 +739,22 @@ const StaffManagement = () => {
                         </div>
                         <div className="flex justify-end space-x-3 pt-2">
                           {member.isActive === false ? (
-                            <button
-                              onClick={() => handleRestore(member)}
-                              className="flex items-center space-x-1 px-3 py-1 text-sm text-green-600 hover:text-green-800"
-                            >
-                              <RefreshIcon className="h-4 w-4" />
-                              <span>Restore</span>
-                            </button>
+                            <>
+                              <button
+                                onClick={() => handleRestore(member)}
+                                className="flex items-center space-x-1 px-3 py-1 text-sm text-green-600 hover:text-green-800"
+                              >
+                                <RefreshIcon className="h-4 w-4" />
+                                <span>Restore</span>
+                              </button>
+                              <button
+                                onClick={() => handleHardDelete(member)}
+                                className="flex items-center space-x-1 px-3 py-1 text-sm text-red-600 hover:text-red-800"
+                              >
+                                <TrashIcon className="h-4 w-4" />
+                                <span>Perm Delete</span>
+                              </button>
+                            </>
                           ) : (
                             <>
                               <button
@@ -721,6 +766,13 @@ const StaffManagement = () => {
                               </button>
                               <button
                                 onClick={() => handleDelete(member)}
+                                className="flex items-center space-x-1 px-3 py-1 text-sm text-yellow-600 hover:text-yellow-800"
+                              >
+                                <MinusCircleIcon className="h-4 w-4" />
+                                <span>Deactivate</span>
+                              </button>
+                              <button
+                                onClick={() => handleHardDelete(member)}
                                 className="flex items-center space-x-1 px-3 py-1 text-sm text-red-600 hover:text-red-800"
                               >
                                 <TrashIcon className="h-4 w-4" />
@@ -755,6 +807,15 @@ const StaffManagement = () => {
         onConfirm={confirmRestore}
         title="Reactivate Staff Member"
         message={`Are you sure you want to reactivate ${selectedStaff?.firstName} ${selectedStaff?.lastName}?`}
+      />
+
+      {/* Hard Delete Confirmation Modal */}
+      <ConfirmModal
+        isOpen={showHardDeleteConfirm}
+        onClose={() => setShowHardDeleteConfirm(false)}
+        onConfirm={confirmHardDelete}
+        title="Permanently Delete Staff"
+        message={`Are you sure you want to permanently delete ${selectedStaff?.firstName} ${selectedStaff?.lastName}? This action CANNOT be reversed and will delete all associated data.`}
       />
     </div>
   );
