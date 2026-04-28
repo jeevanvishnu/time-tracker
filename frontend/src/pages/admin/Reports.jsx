@@ -8,6 +8,8 @@ import {
   ExclamationIcon,
   CalendarIcon,
   SearchIcon,
+  PencilIcon,
+  TrashIcon,
 } from "@heroicons/react/outline";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
@@ -30,8 +32,11 @@ const Reports = () => {
 
   const [searchTerm, setSearchTerm] = useState("");
   const [filterType, setFilterType] = useState("monthly"); // 'monthly' or 'custom'
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [selectedRecord, setSelectedRecord] = useState(null);
 
-  const { register, handleSubmit, watch } = useForm({
+  const { register, handleSubmit, watch, getValues } = useForm({
     defaultValues: {
       month: new Date().getMonth() + 1,
       year: new Date().getFullYear(),
@@ -49,6 +54,9 @@ const Reports = () => {
   useEffect(() => {
     fetchStaff();
     checkDayCompletion();
+    
+    // Fetch initial report (current month) on mount
+    fetchReport(getValues());
 
     const interval = setInterval(checkDayCompletion, 60000);
     return () => clearInterval(interval);
@@ -146,6 +154,66 @@ const Reports = () => {
     } finally {
       setLoading(false);
       setShowFilters(false);
+    }
+  };
+
+  const handleEdit = (record) => {
+    setSelectedRecord(record);
+    setShowEditModal(true);
+  };
+
+  const handleDelete = (record) => {
+    setSelectedRecord(record);
+    setShowDeleteModal(true);
+  };
+
+  const onUpdateAttendance = async (e) => {
+    e.preventDefault();
+    const formData = new FormData(e.target);
+    const data = {
+      punchIn: formData.get("punchIn")
+        ? new Date(
+            new Date(selectedRecord.date).toDateString() +
+              " " +
+              formData.get("punchIn"),
+          )
+        : null,
+      punchOut: formData.get("punchOut")
+        ? new Date(
+            new Date(selectedRecord.date).toDateString() +
+              " " +
+              formData.get("punchOut"),
+          )
+        : null,
+      status: formData.get("status"),
+    };
+
+    try {
+      setLoading(true);
+      await axiosInstance.put(`/admin/attendance/${selectedRecord._id}`, data);
+      toast.success("Attendance updated successfully");
+      setShowEditModal(false);
+      fetchReport(getValues());
+    } catch (error) {
+      console.error("Error updating attendance:", error);
+      toast.error("Failed to update attendance");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const confirmDeleteAttendance = async () => {
+    try {
+      setLoading(true);
+      await axiosInstance.delete(`/admin/attendance/${selectedRecord._id}`);
+      toast.success("Attendance deleted successfully");
+      setShowDeleteModal(false);
+      fetchReport(getValues());
+    } catch (error) {
+      console.error("Error deleting attendance:", error);
+      toast.error("Failed to delete attendance");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -834,6 +902,9 @@ const Reports = () => {
                     <th className="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">
                       Status
                     </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">
+                      Actions
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
@@ -914,6 +985,24 @@ const Reports = () => {
                                 : "Absent"}
                           </span>
                         )}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                        <div className="flex space-x-2">
+                          <button
+                            onClick={() => handleEdit(record)}
+                            className="text-blue-600 hover:text-blue-900"
+                            title="Edit"
+                          >
+                            <PencilIcon className="h-5 w-5" />
+                          </button>
+                          <button
+                            onClick={() => handleDelete(record)}
+                            className="text-red-600 hover:text-red-900"
+                            title="Delete"
+                          >
+                            <TrashIcon className="h-5 w-5" />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -1022,6 +1111,22 @@ const Reports = () => {
                           </div>
                         )}
                       </div>
+                      <div className="flex justify-end space-x-3 mt-4 pt-3 border-t border-gray-100">
+                        <button
+                          onClick={() => handleEdit(record)}
+                          className="flex items-center space-x-1 px-3 py-1.5 text-sm text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
+                        >
+                          <PencilIcon className="h-4 w-4" />
+                          <span>Edit</span>
+                        </button>
+                        <button
+                          onClick={() => handleDelete(record)}
+                          className="flex items-center space-x-1 px-3 py-1.5 text-sm text-red-600 hover:bg-red-50 rounded-lg transition-all"
+                        >
+                          <TrashIcon className="h-4 w-4" />
+                          <span>Delete</span>
+                        </button>
+                      </div>
                     </div>
                   )}
                 </div>
@@ -1100,6 +1205,118 @@ const Reports = () => {
         title="Generate Report"
         message="Today's attendance is still in progress. Some records may be incomplete. Do you want to continue?"
       />
+
+      {/* Delete Confirmation Modal */}
+      <ConfirmModal
+        isOpen={showDeleteModal}
+        onClose={() => setShowDeleteModal(false)}
+        onConfirm={confirmDeleteAttendance}
+        title="Delete Attendance Record"
+        message={`Are you sure you want to delete this attendance record for ${selectedRecord?.userId?.firstName}? This action cannot be undone.`}
+      />
+
+      {/* Edit Attendance Modal */}
+      {showEditModal && selectedRecord && (
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-gray-500 bg-opacity-75 flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-md transform transition-all">
+            <div
+              className="px-6 py-4 border-b border-gray-200 flex justify-between items-center rounded-t-xl"
+              style={{ background: "#020c4c" }}
+            >
+              <h3 className="text-lg font-bold text-white">Edit Attendance</h3>
+              <button
+                onClick={() => setShowEditModal(false)}
+                className="text-white hover:text-gray-200"
+              >
+                <XIcon className="h-6 w-6" />
+              </button>
+            </div>
+            <form onSubmit={onUpdateAttendance} className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Staff Member
+                </label>
+                <p className="text-gray-900 font-medium">
+                  {selectedRecord.userId?.firstName}{" "}
+                  {selectedRecord.userId?.lastName}
+                </p>
+                <p className="text-xs text-gray-500">
+                  {getDateWithDayType(selectedRecord.date)}
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Punch In Time
+                </label>
+                <input
+                  type="time"
+                  name="punchIn"
+                  defaultValue={
+                    selectedRecord.punchIn
+                      ? new Date(selectedRecord.punchIn)
+                          .toTimeString()
+                          .slice(0, 5)
+                      : ""
+                  }
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Punch Out Time
+                </label>
+                <input
+                  type="time"
+                  name="punchOut"
+                  defaultValue={
+                    selectedRecord.punchOut
+                      ? new Date(selectedRecord.punchOut)
+                          .toTimeString()
+                          .slice(0, 5)
+                      : ""
+                  }
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Status
+                </label>
+                <select
+                  name="status"
+                  defaultValue={selectedRecord.status}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="present">Present</option>
+                  <option value="absent">Absent</option>
+                  <option value="half-day">Half Day</option>
+                  <option value="working">Working</option>
+                </select>
+              </div>
+
+              <div className="flex space-x-3 pt-4">
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium disabled:opacity-50"
+                >
+                  {loading ? "Updating..." : "Save Changes"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowEditModal(false)}
+                  className="flex-1 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 font-medium"
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

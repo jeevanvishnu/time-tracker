@@ -284,7 +284,7 @@ const getMonthlyReport = async (req, res) => {
         select: "email firstName lastName",
         match: { role: "staff" },
       })
-      .sort({ date: 1, "userId.firstName": 1 });
+      .sort({ date: -1, "userId.firstName": 1 });
 
     // Filter out records where userId is null (deleted users)
     const validAttendance = attendance.filter(
@@ -919,7 +919,7 @@ const getCustomDateReport = async (req, res) => {
         select: "email firstName lastName",
         match: { role: "staff" },
       })
-      .sort({ date: 1, "userId.firstName": 1 });
+      .sort({ date: -1, "userId.firstName": 1 });
 
     const validAttendance = attendance.filter(
       (record) => record.userId !== null,
@@ -959,6 +959,57 @@ const hardDeleteStaff = async (req, res) => {
   }
 };
 
+// @desc    Update attendance record
+// @route   PUT /api/admin/attendance/:id
+const updateAttendance = async (req, res) => {
+  try {
+    const { punchIn, punchOut, status } = req.body;
+    const attendance = await Attendance.findById(req.params.id);
+
+    if (!attendance) {
+      return res.status(404).json({ message: "Attendance record not found" });
+    }
+
+    if (punchIn) attendance.punchIn = new Date(punchIn);
+    if (punchOut) attendance.punchOut = new Date(punchOut);
+    if (status) attendance.status = status;
+
+    // The pre-save hook in Attendance model will handle calculations
+    await attendance.save();
+
+    res.json({
+      success: true,
+      message: "Attendance updated successfully",
+      attendance,
+    });
+  } catch (error) {
+    console.error("Error in updateAttendance:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+// @desc    Delete attendance record
+// @route   DELETE /api/admin/attendance/:id
+const deleteAttendance = async (req, res) => {
+  try {
+    const attendance = await Attendance.findById(req.params.id);
+
+    if (!attendance) {
+      return res.status(404).json({ message: "Attendance record not found" });
+    }
+
+    await Attendance.findByIdAndDelete(req.params.id);
+
+    res.json({
+      success: true,
+      message: "Attendance record deleted successfully",
+    });
+  } catch (error) {
+    console.error("Error in deleteAttendance:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
 module.exports = {
   createStaff,
   deleteStaff,
@@ -976,4 +1027,6 @@ module.exports = {
   getPendingExpiringLeaves,
   getCustomDateReport,
   hardDeleteStaff,
+  updateAttendance,
+  deleteAttendance,
 };

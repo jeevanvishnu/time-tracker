@@ -17,7 +17,9 @@ const {
   deleteStaff,
   restoreStaff,
   getCustomDateReport,
-  hardDeleteStaff
+  hardDeleteStaff,
+  updateAttendance,
+  deleteAttendance
 } = require('../controllers/adminController');
 const { getAllReports, getUserReports } = require('../controllers/reportController');
 
@@ -39,6 +41,8 @@ router.put('/staff/:id/restore', restoreStaff);
 // Reports
 router.get('/reports/monthly', getMonthlyReport);
 router.get('/reports/custom', getCustomDateReport);
+router.put('/attendance/:id', updateAttendance);
+router.delete('/attendance/:id', deleteAttendance);
  
 // Leave management
 router.get('/leaves', getLeaveRequests);
