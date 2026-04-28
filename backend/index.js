@@ -5,6 +5,8 @@ const dotenv = require("dotenv");
 const authRoutes = require("./routes/authRoutes");
 const staffRoutes = require("./routes/staffRoutes");
 const adminRoutes = require("./routes/adminRoutes");
+const dns = require("dns");
+dns.setServers(['8.8.8.8', '8.8.4.4']);
 const {
   scheduleAutoApprove,
   scheduleHourlyForDev,
