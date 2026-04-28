@@ -23,6 +23,7 @@ const allowedOrigins = [
   "http://localhost:5173",
   "https://time-tracker-nlyj.vercel.app",
   "https://mostech-time-track-two.vercel.app",
+  "https://time-tracker-seven-rouge.vercel.app",
   "https://mostech.ae",
   "https://mostech.ae/time-tracker",
   process.env.FRONTEND_URL,
