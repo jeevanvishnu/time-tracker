@@ -19,7 +19,7 @@ const LeaveManagement = () => {
   const [showRejectModal, setShowRejectModal] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   // eslint-disable-next-line no-unused-vars
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [expiringLeaves, setExpiringLeaves] = useState([]);
   const [showAutoApproveConfirm, setShowAutoApproveConfirm] = useState(false);
 
@@ -74,6 +74,7 @@ const LeaveManagement = () => {
 
   const handleApprove = async (leaveId) => {
     try {
+      setLoading(true);
       await axiosInstance.put(`/admin/leaves/${leaveId}`, {
         status: "approved",
       });
@@ -82,11 +83,13 @@ const LeaveManagement = () => {
       fetchExpiringLeaves();
     } catch (error) {
       toast.error("Failed to approve leave", error);
+      setLoading(false);
     }
   };
 
   const handleReject = async () => {
     try {
+      setLoading(true);
       await axiosInstance.put(`/admin/leaves/${selectedLeave._id}`, {
         status: "rejected",
         rejectionReason,
@@ -99,6 +102,7 @@ const LeaveManagement = () => {
       fetchExpiringLeaves();
     } catch (error) {
       toast.error("Failed to reject leave", error);
+      setLoading(false);
     }
   };
 
@@ -365,7 +369,16 @@ const LeaveManagement = () => {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {filteredLeaves.length === 0 ? (
+                {loading ? (
+                  <tr>
+                    <td colSpan="9" className="px-6 py-12 text-center">
+                      <div className="flex flex-col items-center">
+                        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600 mb-2"></div>
+                        <p className="text-gray-500 text-sm">Loading leave requests...</p>
+                      </div>
+                    </td>
+                  </tr>
+                ) : filteredLeaves.length === 0 ? (
                   <tr>
                     <td
                       colSpan="7"
@@ -484,7 +497,12 @@ const LeaveManagement = () => {
 
         {/* Mobile Card View - Visible only on mobile */}
         <div className="md:hidden">
-          {filteredLeaves.length === 0 ? (
+          {loading ? (
+            <div className="p-8 text-center bg-white rounded-lg shadow-md border border-gray-200">
+              <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600 mx-auto mb-2"></div>
+              <p className="text-gray-500 text-sm">Loading leave requests...</p>
+            </div>
+          ) : filteredLeaves.length === 0 ? (
             <div className="bg-white rounded-lg shadow-md p-8 text-center text-gray-500">
               No leave requests found
             </div>

@@ -19,7 +19,8 @@ const {
   getCustomDateReport,
   hardDeleteStaff,
   updateAttendance,
-  deleteAttendance
+  deleteAttendance,
+  addAttendance
 } = require('../controllers/adminController');
 const { getAllReports, getUserReports } = require('../controllers/reportController');
 
@@ -41,6 +42,7 @@ router.put('/staff/:id/restore', restoreStaff);
 // Reports
 router.get('/reports/monthly', getMonthlyReport);
 router.get('/reports/custom', getCustomDateReport);
+router.post('/attendance', addAttendance);
 router.put('/attendance/:id', updateAttendance);
 router.delete('/attendance/:id', deleteAttendance);
  

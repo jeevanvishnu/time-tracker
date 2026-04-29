@@ -24,6 +24,7 @@ const StaffManagement = () => {
   const [showAddForm, setShowAddForm] = useState(false);
   const [showEditForm, setShowEditForm] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [expandedStaff, setExpandedStaff] = useState(null);
   const [editingStaff, setEditingStaff] = useState(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -57,6 +58,7 @@ const StaffManagement = () => {
 
   const fetchStaff = async () => {
     try {
+      setIsLoading(true);
       const { data } = await axiosInstance.get(
         `/admin/staff?includeInactive=true`,
       );
@@ -64,6 +66,8 @@ const StaffManagement = () => {
     } catch (error) {
       console.error("Error fetching staff:", error);
       toast.error("Failed to fetch staff");
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -538,7 +542,16 @@ const StaffManagement = () => {
                  </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {filteredStaff.length === 0 ? (
+                {isLoading ? (
+                  <tr>
+                    <td colSpan="5" className="px-6 py-12 text-center">
+                      <div className="flex flex-col items-center">
+                        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600 mb-2"></div>
+                        <p className="text-gray-500 text-sm">Loading staff members...</p>
+                      </div>
+                    </td>
+                  </tr>
+                ) : filteredStaff.length === 0 ? (
                   <tr>
                     <td colSpan="5" className="px-6 py-12 text-center text-gray-500">
                       <div className="flex flex-col items-center">
@@ -657,7 +670,24 @@ const StaffManagement = () => {
 
           {/* Mobile Card View */}
           <div className="md:hidden">
-            {filteredStaff.map((member) => {
+            {isLoading ? (
+              <div className="p-8 text-center">
+                <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600 mx-auto mb-2"></div>
+                <p className="text-gray-500 text-sm">Loading staff members...</p>
+              </div>
+            ) : filteredStaff.length === 0 ? (
+              <div className="p-8 text-center text-gray-500">
+                <div className="flex flex-col items-center">
+                  <UserIcon className="h-12 w-12 text-gray-300 mb-2" />
+                  <p className="text-sm">
+                    {activeTab === "active"
+                      ? "No active staff members found"
+                      : "No inactive staff members found"}
+                  </p>
+                </div>
+              </div>
+            ) : (
+              filteredStaff.map((member) => {
               const isCurrentlyWorking = isStaffActiveNow(member._id);
               return (
                 <div
@@ -786,7 +816,7 @@ const StaffManagement = () => {
                   )}
                 </div>
               );
-            })}
+            }))}
           </div>
         </div>
       </div>
