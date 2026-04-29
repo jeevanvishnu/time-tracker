@@ -61,6 +61,7 @@ const Header = () => {
       return [
         { path: "/admin", name: "Dashboard", icon: HomeIcon },
         { path: "/admin/staff", name: "Staff", icon: UsersIcon },
+        { path: "/admin/attendance", name: "Attendance", icon: ClockIcon },
         { path: "/admin/reports", name: "Reports", icon: ChartBarIcon },
         { path: "/admin/leaves", name: "Leaves", icon: CalendarIcon },
         { path: "/admin/staff-reports", name: "Daily Reports", icon: ClipboardListIcon },

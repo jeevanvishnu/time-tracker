@@ -988,6 +988,58 @@ const updateAttendance = async (req, res) => {
   }
 };
 
+// @desc    Add manual attendance record
+// @route   POST /api/admin/attendance
+const addAttendance = async (req, res) => {
+  try {
+    const { userId, date, punchIn, punchOut, status } = req.body;
+
+    // Check if user exists
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: "Staff member not found" });
+    }
+
+    // Check if attendance already exists for this date
+    const attendanceDate = new Date(date);
+    attendanceDate.setHours(0, 0, 0, 0);
+
+    const tomorrow = new Date(attendanceDate);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+
+    const existingAttendance = await Attendance.findOne({
+      userId,
+      date: {
+        $gte: attendanceDate,
+        $lt: tomorrow,
+      },
+    });
+
+    if (existingAttendance) {
+      return res.status(400).json({ message: "Attendance record already exists for this date" });
+    }
+
+    const attendance = new Attendance({
+      userId,
+      date: attendanceDate,
+      punchIn: punchIn ? new Date(punchIn) : null,
+      punchOut: punchOut ? new Date(punchOut) : null,
+      status: status || 'absent'
+    });
+
+    await attendance.save();
+
+    res.status(201).json({
+      success: true,
+      message: "Attendance record added successfully",
+      attendance,
+    });
+  } catch (error) {
+    console.error("Error in addAttendance:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
 // @desc    Delete attendance record
 // @route   DELETE /api/admin/attendance/:id
 const deleteAttendance = async (req, res) => {
@@ -1029,4 +1081,5 @@ module.exports = {
   hardDeleteStaff,
   updateAttendance,
   deleteAttendance,
+  addAttendance,
 };
