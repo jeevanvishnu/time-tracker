@@ -756,7 +756,8 @@ const Reports = () => {
                         <input
                           type="date"
                           {...register("startDate")}
-                          className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                          className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 cursor-pointer"
+                          onClick={(e) => e.target.showPicker?.()}
                         />
                       </div>
                     </div>
@@ -770,7 +771,8 @@ const Reports = () => {
                         <input
                           type="date"
                           {...register("endDate")}
-                          className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                          className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 cursor-pointer"
+                          onClick={(e) => e.target.showPicker?.()}
                         />
                       </div>
                     </div>

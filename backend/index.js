@@ -5,6 +5,8 @@ const dotenv = require("dotenv");
 const authRoutes = require("./routes/authRoutes");
 const staffRoutes = require("./routes/staffRoutes");
 const adminRoutes = require("./routes/adminRoutes");
+const dns = require("dns");
+dns.setServers(['8.8.8.8', '8.8.4.4']);
 const {
   scheduleAutoApprove,
   scheduleHourlyForDev,
@@ -19,7 +21,9 @@ const PORT = process.env.PORT || 5000;
 // Middleware
 const allowedOrigins = [
   "http://localhost:5173",
+  "https://time-tracker-nlyj.vercel.app",
   "https://mostech-time-track-two.vercel.app",
+  "https://time-tracker-seven-rouge.vercel.app",
   "https://mostech.ae",
   "https://mostech.ae/time-tracker",
   process.env.FRONTEND_URL,

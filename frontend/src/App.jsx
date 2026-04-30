@@ -21,6 +21,7 @@ import Reports from "./pages/admin/Reports";
 import LeaveManagement from "./pages/admin/LeaveManagement";
 import StaffReports from "./pages/admin/StaffReports";
 import StaffDailyReports from "./pages/staff/StaffReports";
+import Attendance from "./pages/admin/Attendance";
 import ResetPassword from "./pages/ResetPassword";
 
 function App() {
@@ -37,7 +38,7 @@ function App() {
     );
   }
   return (
-    <Router basename="/time-tracker">
+    <Router>
       <AuthProvider>
         <div className="min-h-screen bg-gray-50">
           <Toaster position="top-right" />
@@ -122,6 +123,14 @@ function App() {
               element={
                 <PrivateRoute adminOnly={true}>
                   <LeaveManagement />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/admin/attendance"
+              element={
+                <PrivateRoute adminOnly={true}>
+                  <Attendance />
                 </PrivateRoute>
               }
             />

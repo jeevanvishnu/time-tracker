@@ -173,7 +173,8 @@ const StaffReports = () => {
                     name="startDate"
                     value={filters.startDate}
                     onChange={handleFilterChange}
-                    className="w-full px-3 sm:px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                    className="w-full px-3 sm:px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all cursor-pointer"
+                    onClick={(e) => e.target.showPicker?.()}
                   />
                 </div>
 
@@ -187,7 +188,8 @@ const StaffReports = () => {
                     name="endDate"
                     value={filters.endDate}
                     onChange={handleFilterChange}
-                    className="w-full px-3 sm:px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                    className="w-full px-3 sm:px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all cursor-pointer"
+                    onClick={(e) => e.target.showPicker?.()}
                   />
                 </div>
 

@@ -465,7 +465,8 @@ const StaffDailyReports = () => {
                           startDate: e.target.value,
                         })
                       }
-                      className="pl-9 pr-3 py-2 text-sm border border-gray-300 rounded-lg w-full"
+                      className="pl-9 pr-3 py-2 text-sm border border-gray-300 rounded-lg w-full cursor-pointer"
+                      onClick={(e) => e.target.showPicker?.()}
                     />
                   </div>
                   <span className="text-gray-500 text-center hidden sm:inline">
@@ -479,7 +480,8 @@ const StaffDailyReports = () => {
                       onChange={(e) =>
                         setDateRange({ ...dateRange, endDate: e.target.value })
                       }
-                      className="pl-9 pr-3 py-2 text-sm border border-gray-300 rounded-lg w-full"
+                      className="pl-9 pr-3 py-2 text-sm border border-gray-300 rounded-lg w-full cursor-pointer"
+                      onClick={(e) => e.target.showPicker?.()}
                     />
                   </div>
                   <button
