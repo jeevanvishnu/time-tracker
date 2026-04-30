@@ -577,7 +577,8 @@ const LeaveRequest = () => {
                         type="date"
                         {...register("startDate", { required: "Date is required" })}
                         min={new Date().toISOString().split("T")[0]}
-                        className="w-full pl-12 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all outline-none"
+                        className="w-full pl-12 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all outline-none cursor-pointer"
+                        onClick={(e) => e.target.showPicker?.()}
                       />
                     </div>
                     {errors.startDate && (
@@ -600,7 +601,8 @@ const LeaveRequest = () => {
                             validate: (value) => !startDate || value >= startDate || "Must be after start date"
                           })}
                           min={startDate || new Date().toISOString().split("T")[0]}
-                          className="w-full pl-12 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all outline-none"
+                          className="w-full pl-12 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all outline-none cursor-pointer"
+                          onClick={(e) => e.target.showPicker?.()}
                         />
                       </div>
                       {errors.endDate && (
