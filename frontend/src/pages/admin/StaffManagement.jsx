@@ -396,7 +396,8 @@ const StaffManagement = () => {
                     type="date"
                     {...register("joiningDate")}
                     max={new Date().toISOString().split("T")[0]}
-                    className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md"
+                    className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md cursor-pointer"
+                    onClick={(e) => e.target.showPicker?.()}
                   />
                 </div>
                 <p className="text-xs text-gray-500 mt-1">
@@ -489,7 +490,8 @@ const StaffManagement = () => {
                     type="date"
                     {...register("joiningDate")}
                     max={new Date().toISOString().split("T")[0]}
-                    className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md"
+                    className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md cursor-pointer"
+                    onClick={(e) => e.target.showPicker?.()}
                   />
                 </div>
               </div>
